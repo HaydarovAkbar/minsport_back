@@ -1,0 +1,197 @@
+from django_filters.rest_framework import DjangoFilterBackend
+from django.utils import timezone
+from rest_framework import viewsets, generics
+from rest_framework.filters import SearchFilter
+from django.db.models import Q
+from rest_framework.response import Response
+from rest_framework.reverse import reverse
+
+from django.db.models.functions import Now
+
+from . import serializers
+from api import pagination
+from admin_panel.model import press_service
+
+
+class CustomModalViewSet(viewsets.ModelViewSet):
+    def get_queryset(self):
+        queryset = self.queryset
+        if hasattr(self.queryset.model, 'title'):
+            queryset = self.queryset.exclude(title__exact='')
+
+        return queryset
+
+
+class NewsListView(CustomModalViewSet, generics.ListAPIView):
+    """
+    The model will be parent for the remaining secondary news class
+    Its parameters will be used & inherited
+
+    2. Include generics to use filters&search in params
+    """
+    queryset = press_service.News.objects.filter(is_published=True, publish_date__lte=Now()).exclude(
+        title__exact='').order_by('-publish_date')
+    pagination_class = pagination.MidShort
+    http_method_names = ['get']
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['category', 'category__slug', 'hashtag__slug', 'region__slug']
+    search_fields = ['title_uz', 'title_ru', 'title_en', ]
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return serializers.NewsDetailSerializer
+        return serializers.NewsListSerializer
+
+    # def get_queryset(self):
+    #     queryset = self.queryset
+    #     # Filter: category ID in request params
+    #     category = self.request.GET.get('category', None)
+    #     if category is not None:
+    #         queryset = queryset.filter(category=category)
+    #     return queryset
+
+    def retrieve(self, request, *args, **kwargs):
+        # customization here
+        instance = self.get_object()
+        instance.views += 1
+        instance.save()
+        url = reverse('news-api-detail', args=(instance.id,), request=request)
+        related = self.get_queryset().filter(category=instance.category, publish_date__lte=Now()).exclude(
+            id=instance.id, )[:4]
+        related_serializer = serializers.NewsListSerializer
+
+        payload = {
+            'news': self.get_serializer(instance).data,
+            'url': url,
+            'related': related_serializer(related, many=True).data
+        }
+        return Response(payload)
+
+
+class IndexNewsListView(NewsListView):
+    """
+    News list for Web Index
+    """
+    queryset = press_service.News.objects.filter(is_published=True, main_page=True, publish_date__lte=Now()).order_by(
+        '-publish_date')
+
+    pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        top = self.get_queryset().first()
+        instance = self.get_queryset()[:8]
+        top_serializer = serializers.NewsTopSerializer
+        payload = {
+            'top': top_serializer(top).data,
+            # 'news': serializer(instance, many=True).data,
+            'news': top_serializer(instance, many=True).data,
+        }
+        return Response(payload)
+
+
+class HeaderNewsListView(NewsListView):
+    pagination_class = None
+    queryset = press_service.News.objects.filter(is_published=True, publish_date__lte=Now()).order_by('-publish_date')
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return serializers.NewsDetailSerializer
+        return serializers.HeaderNewsSerializer
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()[:20]
+        serializer = self.get_serializer_class()
+        return Response(serializer(queryset, many=True).data)
+
+
+class IndexNewsLongListView(IndexNewsListView):
+    """
+    News list for Mobile Index
+    """
+
+    def list(self, request, *args, **kwargs):
+        top = self.get_queryset().first()
+        instance = self.get_queryset().exclude(id=top.id)[:6]
+        serializer = serializers.NewsListSerializer
+        payload = {
+            'top': serializer(top).data,
+            'news': serializer(instance, many=True).data,
+        }
+        return Response(payload)
+
+
+class MainNewsListView(viewsets.ModelViewSet, generics.ListAPIView):
+    """ Inherited from NewsList class. The function will be overrided here"""
+    queryset = press_service.News.objects.filter(is_published=True, publish_date__lte=Now()).order_by('-publish_date')
+    pagination_class = None
+    http_method_names = ['get']
+    serializer_class = serializers.NewsListSerializer
+
+    def get_queryset(self):
+        param = self.request.query_params.get('category__slug')
+        queryset = self.queryset.exclude(title__exact='')[:8]
+        if param is not None:
+            queryset = self.queryset.filter(category__slug=param).exclude(title__exact='')[:8]
+        return queryset
+
+
+class NewsRegionView(NewsListView):
+    queryset = press_service.News.objects.filter(is_published=True, region__isnull=False,
+                                                 publish_date__lte=Now()).order_by('-publish_date')
+    filter_backends = [DjangoFilterBackend, ]
+    filterset_fields = ['region__slug']
+
+
+class NewsCategoryView(CustomModalViewSet):
+    queryset = press_service.NewsCategory.objects.all()
+    serializer_class = serializers.NewsCategoryserializer
+    http_method_names = ['get']
+    pagination_class = None
+
+
+class NewsHashtagView(CustomModalViewSet):
+    queryset = press_service.NewsHashtag.objects.all()
+    serializer_class = serializers.NewsHashtagserializer
+    http_method_names = ['get']
+    pagination_class = None
+
+
+class PressListView(CustomModalViewSet):
+    queryset = press_service.PressArticleLink.objects.filter(is_published=True, publish_date__lte=Now()).order_by(
+        '-publish_date')
+    serializer_class = serializers.PressSerializer
+    pagination_class = None
+    http_method_names = ['get']
+
+
+class FAQListView(CustomModalViewSet):
+    queryset = press_service.FAQ.objects.all()
+    serializer_class = serializers.FAQSerializer
+    pagination_class = None
+    http_method_names = ['get']
+
+
+class NewsIntegration(CustomModalViewSet):
+    queryset = press_service.News.objects.all()
+    serializer_class = serializers.NewsIntegration
+    pagination_class = pagination.NewsPagination
+    http_method_names = ['get']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        from_datetime = self.request.query_params.get('from_datetime')
+        to_datetime = self.request.query_params.get('to_datetime')
+
+        if from_datetime and to_datetime:
+            queryset = queryset.filter(
+                Q(publish_date__gte=from_datetime) &
+                Q(publish_date__lte=to_datetime)
+            )
+        elif from_datetime:
+            queryset = queryset.filter(publish_date__gte=from_datetime)
+        elif to_datetime:
+            queryset = queryset.filter(publish_date__lte=to_datetime)
+        else:
+            pass
+
+        return queryset
