@@ -4,7 +4,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.text import slugify
 # from django.utils.translation import ugettext_lazy as _
-from sorl.thumbnail import ImageField
+# from sorl.thumbnail import ImageField
 from django_resized import ResizedImageField
 from django.db.models.signals import post_save, pre_save
 
