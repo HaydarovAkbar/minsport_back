@@ -23,6 +23,7 @@ from api.rating import views as rating
 from api.auth import views as auth
 from api.index import views as index
 from api.vacancy import views as vacancy
+from api.menu import views as menu
 
 # router.register(r'index', index.IndexViewSet, basename='index-api')
 
@@ -185,7 +186,8 @@ adm_router.register(r'contact', site.AdmContactSettingView, basename='contact-ap
 adm_router.register(r'typo', site.AdmTypoView, basename='typo-api')
 adm_router.register(r'week-day', contact.AdmWeekDayView, basename='week_day-api')
 adm_router.register(f'reception', contact.AdmReceptionView, basename='reception-api')
-
+adm_router.register(r'menu', menu.AdmMenuView, basename='adm-menu-api')
+adm_router.register(r'static-page', menu.AdmStaticPageView, basename='adm-static_page-api')
 bot_router = routers.DefaultRouter()
 bot_router.register(r'bot_db', rating.SubscribersViewSet, basename='bot_db-api')
 urlpatterns = [
