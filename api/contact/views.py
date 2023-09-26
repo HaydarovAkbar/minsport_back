@@ -125,7 +125,7 @@ class AdmReceptionView(viewsets.ModelViewSet):
     queryset = contact.Reception.objects.all()
     serializer_class = serializers.AdmReceptionSerializer
     pagination_class = None
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post', 'put', 'delete']
 
 
@@ -133,5 +133,5 @@ class AdmWeekDayView(viewsets.ModelViewSet):
     queryset = contact.WeekDay.objects.all()
     serializer_class = serializers.AdmWeekDaySerializer
     pagination_class = None
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post', 'put', 'delete']

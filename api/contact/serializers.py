@@ -62,7 +62,6 @@ class AdmReceptionSerializer(serializers.ModelSerializer):
         model = contact.Reception
         fields = '__all__'
 
-
     def to_representation(self, instance):
         response = super().to_representation(instance)
         response['day_title_uz'] = instance.day.title_uz

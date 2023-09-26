@@ -38,10 +38,10 @@ class MenuCreateAPIView(HasRoleMixin, APIView):
         return Response('success', status=201)
 
 
-
 class MenuCreateAPI(HasRoleMixin, APIView):
     allowed_roles = 'admin'
     redirect_to_login = 'login'
+
     def post(self, request, *args, **kwargs):
         data = request.data.get('payload')
         try:
@@ -64,12 +64,12 @@ class MenuCreateAPI(HasRoleMixin, APIView):
             return Response(_("Muvaffaqiyatli saqlandi"), status=201)
         except:
             return Response(_("Xatolik yuz berdi"), status=200)
-            
 
 
 class MenuDeleteAPI(HasRoleMixin, APIView):
     allowed_roles = 'admin'
     redirect_to_login = 'login'
+
     def post(self, request, *args, **kwargs):
         data = self.request.data.get('id')
         obj = Menu.objects.filter(id=int(data))
